@@ -6,12 +6,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Elevator implements Callable<String> {
     private final int elevatorId;
     private final int speed;
-    private int curFloor;
+    private volatile int curFloor;
     private int destinationFloor;
-    private DIRECTION state;
+    private volatile DIRECTION state;
     private final ConcurrentLinkedQueue<Request> requests;
     private final ArrayList<Request> passengers;
-    private Request mainRequest;
+    private volatile Request mainRequest;
     private final AtomicInteger remainRequests;
 
     public int getCurFloor(){
@@ -66,6 +66,7 @@ public class Elevator implements Callable<String> {
         synchronized (requests) {
             var iterator = requests.iterator();
             while (iterator.hasNext()) {
+                System.out.println(remainRequests + " from getRequests");
                 Request request = iterator.next();
                 if (state == request.getDirection() && mainRequest.getDirection() == request.getDirection() && curFloor == request.getStartFloor()) {
                     Thread.sleep((int)(speed * 500));
@@ -89,6 +90,7 @@ public class Elevator implements Callable<String> {
                 System.out.printf("A passenger has been free by elevator %d on %d floor\n", elevatorId, passenger.getDestinationFloor() + 1);
             }
         }
+
     }
     private void move(int pointFloor) throws InterruptedException {
         while (pointFloor > curFloor){
@@ -107,24 +109,30 @@ public class Elevator implements Callable<String> {
             curFloor--;
             System.out.printf("%d elevator floor: %d\n", elevatorId, curFloor + 1);
         }
+        Thread.sleep(1000);
     }
 
     @Override
     public String call() throws Exception {
+        Thread.sleep(500);
         System.out.printf("Elevator %d is moving to waiter on %d floor...\n", elevatorId, mainRequest.getStartFloor() + 1);
         move(mainRequest.getStartFloor());
 
-        state = mainRequest.getDirection();
+        passengers.add(mainRequest);
         getRequestsFromFloor();
         freeRequestsToFloor();
+        state = mainRequest.getDirection();
 
-        System.out.printf("Elevator %d is delivering passengers from %d floor...\n", elevatorId, mainRequest.getDestinationFloor() + 1);
+        Thread.sleep(500);
+        System.out.printf("Elevator %d is delivering passengers from %d floor...\n", elevatorId, mainRequest.getStartFloor() + 1);
         move(mainRequest.getDestinationFloor());
+        Thread.sleep(500);
 
         getRequestsFromFloor();
         freeRequestsToFloor();
         state = DIRECTION.RESTS;
 
+        System.out.println("Elevator " + elevatorId + " stopped!");
         return "Elevator " + elevatorId + " stopped!";
     }
 }

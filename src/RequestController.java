@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RequestController implements Callable<String> {
     private final int nFloors;
     private final AtomicInteger nRequests;
+    private final int totalRequests;
     private final int maxDelay;
     private final ConcurrentLinkedQueue<Request> requests;
     private final Random random;
@@ -13,6 +14,7 @@ public class RequestController implements Callable<String> {
     RequestController(int nFloors, AtomicInteger nRequests, int maxDelay, ConcurrentLinkedQueue<Request> requests){
         this.nFloors = nFloors;
         this.requests = requests;
+        totalRequests = nRequests.get();
         this.nRequests = nRequests;
         this.maxDelay = maxDelay;
         random = new Random();
@@ -30,12 +32,12 @@ public class RequestController implements Callable<String> {
 
     @Override
     public String call() throws Exception {
-        for (int i = 0; i < nRequests.get(); i++) {
+        for (int i = 0; i < totalRequests; i++) {
             generateRequest();
             try {
                 Thread.sleep(random.nextInt(maxDelay + 1) * 1000L);
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                System.out.println(e.getMessage());
             }
         }
         return "All requests were generated!";

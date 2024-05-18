@@ -12,7 +12,7 @@ public class ElevatorController implements Callable<String> {
         this.requests = requests;
         elevator1 = new Elevator(remainRequests, 1);
         elevator2 = new Elevator(remainRequests, 2);
-        executorService = Executors.newSingleThreadExecutor();
+        executorService = Executors.newFixedThreadPool(2);
     }
 
     private Elevator getFreeElevator(Request request){
@@ -42,20 +42,27 @@ public class ElevatorController implements Callable<String> {
         while (remainRequests.get() > 0){
             if (!requests.isEmpty()){
                 if (elevator1.getState() == DIRECTION.RESTS || elevator2.getState() == DIRECTION.RESTS){
+                    Thread.sleep(500);
                     Request request = requests.poll();
                     Elevator freeElevator = getFreeElevator(request);
                     if (freeElevator == null){
                         continue;
                     }
+
                     freeElevator.setMainRequest(request);
-                    Thread.sleep(500);
+                    if (request.getStartFloor() >= freeElevator.getCurFloor()) {
+                        freeElevator.setState(DIRECTION.UP);
+                    } else {
+                        freeElevator.setState(DIRECTION.DOWN);
+                    }
                     Future<String> resultMoving = executorService.submit(freeElevator);
 
-                    System.out.println(resultMoving.get());
+                    //System.out.println(resultMoving.get());
+
                 }
             }
         }
-        executorService.shutdownNow();
+        executorService.shutdown();
         return "All elevators finished their work!";
     }
 }
